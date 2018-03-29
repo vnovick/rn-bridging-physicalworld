@@ -12,12 +12,14 @@ const regions = [{
 
 const beaconsRegistry = [{
   uuid: '07775DD0-111B-11E4-9191-0800200C9A66',
+  index: 1,
   major: 12288,
   minor: 4608,
   name: 'Puck.js',
-  imgUrl: 'https://d1dr2mxwsd2nqe.cloudfront.net/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/e/s/espruinopuck.js6_2.jpg'
+  imgUrl: 'https://www.beaconzone.co.uk/image/cache/catalog/puckcase_smaller-500x500.jpg'
 },{
   uuid: '07775DD0-111B-11E4-9191-0800200C9A66',
+  index: 2,
   major: 9010,
   minor: 23588,
   name: 'XY Tracker',
@@ -117,10 +119,14 @@ export class BeaconsScreen extends React.Component {
     return (
       <Card 
         key={`${item.uuid}-${item.major}-${item.minor}`} 
-        image={{ uri: item.imgUrl }} 
         title={item.name}
       >
         <View>
+          <Avatar 
+            large
+            rounded
+            source={{uri: item.imgUrl}}
+          />
           <Text h6>
             UUID: {item.uuid ? item.uuid  : 'NA'}
           </Text>
@@ -155,8 +161,8 @@ export class BeaconsScreen extends React.Component {
 
   render() {
     return (
-      <ScrollView contentContainerStyle={{justifyContent: 'center'}}>
-        { this.state.beacons.map(mergeWithRegistryData).map(this.renderRow) }
+      <ScrollView style={{paddingTop: 20 }}contentContainerStyle={{justifyContent: 'center'}}>
+        { this.state.beacons.map(mergeWithRegistryData).sort((a,b) => a.index > b.index).map(this.renderRow) }
       </ScrollView>
     )
   }

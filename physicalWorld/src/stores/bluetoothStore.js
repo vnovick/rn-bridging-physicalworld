@@ -91,6 +91,16 @@ export class BluetoothStore {
     ].filter((value, index, self) => self.indexOf(value) === index)
   }
 
+  @action setServices(services) {
+    this.status = 'Services discovered'
+    this.services = services
+  }
+
+  @action setCharacteristics(characteristics) {
+    this.status = 'Characteristics discovered'
+    this.characteristics = characteristics
+  }
+
   @action async connectDevice(device) {
     try {
       this.status = `Connecting ${device.name} with id: ${device.id}`
@@ -103,28 +113,16 @@ export class BluetoothStore {
     }
   }
 
-  @action setServices(services) {
-    this.status = 'Services discovered'
-    this.services = services
+// Async actions 
+
+  @action async discoverServices(){
+    const serviceArray = await this.serviceDiscovery.services()
+    this.setServices(serviceArray)
   }
 
-  @action setCharacteristics(services) {
-    this.status = 'Characteristics discovered'
-    this.characteristics = this.characteristics
-  }
-
-  @action async logServicesAndCharacteristics(device) {
-    const serviceDiscovery = await device.discoverAllServicesAndCharacteristics()
-    const serviceArray = await serviceDiscovery.services()
-    const characteristics = 
-      await Promise.all(
-        serviceArray.map(
-          async service => await service.characteristics()
-        )
-      )
-    this.serviceDiscovery = serviceDiscovery
-    this.services = serviceArray
-    this.characteristics == characteristics
+  @action async discoverCharacteristics(service){
+    const characteristics = await service.characteristics()
+    this.setCharacteristics(characteristics)
   }
 
   @action async startServiceDiscovery(device){

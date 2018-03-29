@@ -8,11 +8,6 @@ const ROOT = {
 }
 
 export class StatefulNavigator extends React.Component {
-  
-
-  componentDidMount() {
-    
-  }
 
   render() {
     return (

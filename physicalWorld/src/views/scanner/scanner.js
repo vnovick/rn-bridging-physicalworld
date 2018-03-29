@@ -1,9 +1,9 @@
 import React from 'react'
-import { Platform, View, Text, Button, ScrollView, TouchableOpacity} from 'react-native'
+import { Platform, View, Text, ScrollView, Button, TouchableOpacity} from 'react-native'
 import Accordion from 'react-native-collapsible/Accordion'
 import LottieView from 'lottie-react-native'
 import { inject, observer } from 'mobx-react'
-import { Card, List, ListItem } from 'react-native-elements'
+import { Card, List, ListItem, Avatar } from 'react-native-elements'
 
 
 const LEDBULUBUUID = '01601DE3-C850-4739-B9A0-2CFF327FDA37'
@@ -38,6 +38,13 @@ export class Scanner extends React.Component {
     )
   }
 
+
+  connectAndNavigate(device) {
+    this.props.bluetoothStore.connectDevice(device)
+    this.props.navigation.navigate('services')
+  }
+
+
   renderContent(device) {
     return (
       <Card>
@@ -53,6 +60,7 @@ export class Scanner extends React.Component {
         <Text>serviceUUIDs: {device.serviceUUIDs}</Text>
         <Text>solicitedServiceUUIDs: {device.solicitedServiceUUIDs}</Text>
         <Text>txPowerLevel: {device.txPowerLevel}</Text>
+        <Button title="Connect" onPress={() => this.connectAndNavigate(device)} />
       </Card>
     )
   }
@@ -77,7 +85,7 @@ export class Scanner extends React.Component {
           underlayColor="rgba(255,255,255,.5)"
           sections={this.props.bluetoothStore.deviceList.toJS()}
           renderHeader={this.renderHeader}
-          renderContent={this.renderContent}
+          renderContent={(content) => this.renderContent(content)}
         />
       </ScrollView>
     )

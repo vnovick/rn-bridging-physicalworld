@@ -1,5 +1,5 @@
 import { StackNavigator, TabNavigator } from 'react-navigation'
-import { Scanner } from '../views/scanner'
+import { Scanner, Services, Characteristics } from '../views/scanner'
 import { LightBulb } from '../views/light-bulb'
 import { BeaconsScreen } from '../views/beacons'
 import { TabBar } from '../shared/tab-bar'
@@ -9,9 +9,19 @@ export const MainNavigator = StackNavigator(
     tabs: {
       screen: TabNavigator(
         {
-          scanner: { screen: Scanner },
+          beacons: { screen: BeaconsScreen },
+          scanner: { screen: 
+            StackNavigator({
+              main: { screen: Scanner },
+              services: {
+                screen: Services
+               },
+              characteristics: {
+                screen: Characteristics
+              }
+            }),
+          },
           lightBulb: { screen: LightBulb },
-          beacons: { screen: BeaconsScreen }
         },
         {
           tabBarComponent: TabBar,

@@ -1623,6 +1623,7 @@
 					"-ObjC",
 					"-lc++",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.reactjs.native.physicalWorld;
 				PRODUCT_NAME = physicalWorld;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -1652,6 +1653,7 @@
 					"-ObjC",
 					"-lc++",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.reactjs.native.physicalWorld;
 				PRODUCT_NAME = physicalWorld;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
