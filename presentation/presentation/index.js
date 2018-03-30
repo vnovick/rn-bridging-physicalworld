@@ -398,10 +398,10 @@ export default class Presentation extends React.Component {
           <Heading size={3} textColor="secondary" italic>Thank you!</Heading>
           <List style={{ listStyle: "none" }}>
             <ListItem>
-              <Link href=""><span style={{ textDecoration: "none ", color: "#b6d6c1"}}>slides: </span><span style={{ color: "#f74c4f"}}>presentation link</span></Link>
+              <Link href="rn-bridging-physicalworld.surge.sh"><span style={{ textDecoration: "none ", color: "#b6d6c1"}}>slides: </span><span style={{ color: "#f74c4f"}}>rn-bridging-physicalworld.surge.sh</span></Link>
             </ListItem>
             <ListItem>
-              <Link href=""><span style={{ textDecoration: "none ", color: "#b6d6c1"}}>repo: </span><span style={{ color: "#f74c4f", fontSize: "2rem"}}>repo link</span></Link>
+              <Link href="https://github.com/vnovick/rn-bridging-physicalworld"><span style={{ textDecoration: "none ", color: "#b6d6c1"}}>repo: </span><span style={{ color: "#f74c4f", fontSize: "2rem"}}>https://github.com/vnovick/rn-bridging-physicalworld</span></Link>
             </ListItem>
           </List>
         </Slide>
