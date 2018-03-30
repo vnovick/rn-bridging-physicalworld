@@ -1,178 +1,126 @@
-import React, { Component } from 'react';
-import {
-  AppRegistry,
-  StyleSheet,
-  Text,
-  ImageBackground,
-  TouchableOpacity,
-  View
-} from 'react-native';
+import React from 'react'
+import { Platform, View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native'
+import { inject, observer } from 'mobx-react'
+import LottieView from 'lottie-react-native'
+import { Card, Button } from 'react-native-elements'
+import { Buffer } from 'buffer';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { ColorPicker } from 'react-native-color-picker'
-import { Buffer } from 'buffer';
-import { BleManager } from 'react-native-ble-plx';
 
-const LEDBULUBUUID = '01601DE3-C850-4739-B9A0-2CFF327FDA37'
+const LEDBULUBUUID = 
+  '01601DE3-C850-4739-B9A0-2CFF327FDA37'
+const LED_BULB_SERVICE_UUID = 
+  '0000ffe5-0000-1000-8000-00805f9b34fb'
+const LED_BULB_SERVICE_CHAR = 
+  '0000ffe9-0000-1000-8000-00805f9b34fb'
 
-export default class RNLedbulb extends Component {
-  constructor(){
-    super();
-    this.manager = new BleManager();
-  }
+
+@inject('bluetoothStore')
+@observer
+export class LightBulb extends React.Component {
 
   state = {
-    bluetoothPoweredOn: false,
-    on: true,
-    connected: false,
+    error: '',
     color: 'ffff00',
-    loading: false,
-    error: false
+    on: false
   }
 
-   componentWillMount() {
-    const subscription = this.manager.onStateChange(state => {
-      if (state === 'PoweredOn'){
+  async setLightBulbColor(color){
+    const value = new Buffer(
+      `56${color}00f0aa`, 
+      'hex'
+    ).toString('base64')
+    const response = await this.props.bluetoothStore
+      .connectedDevice
+      .writeCharacteristicWithResponseForService(
+        LED_BULB_SERVICE_UUID,
+        LED_BULB_SERVICE_CHAR,
+        value
+    )
+  }
+
+  connectToLightBulb = async () => {
+    const { deviceList } = this.props.bluetoothStore
+    const filteredDeviceList = deviceList
+      .filter(device => device.id === LEDBULUBUUID)
+    if (filteredDeviceList.length > 0) {
+      try {
+        const lightBulb = filteredDeviceList.reduce((acc, device) => device)
+        const response = await this.props
+          .bluetoothStore.connectDevice(lightBulb)
+      } catch (e){
         this.setState({
-          error: false,
-          bluetoothPoweredOn: true
-        })
-      } else {
-        this.setState({
-          connected: false
+          error: `Error occured: ${e.message}`
         })
       }
-    })
+    } else {
+      this.setState({
+        error: 'Bluetooth not yet ready'
+      })
+    }
   }
 
-  bulbPress = () => {
-    const { color, connected } = this.state;
-    connected ? this.ledToggle(color) : this.scanAndConnect();
-  }
-
-  ledToggle(color){
+  toggleLightBulb = (color) => {
     if (this.state.on) {
       this.setState({
         on: false
       })
-      this.setColor("000000", true)
+      this.setLightBulbColor("000000")
     } else {
       this.setState({
         on: true
       })
-      this.setColor(color)
+      this.setLightBulbColor(this.state.color)
     }
-  }
-
-  scanAndConnect = () => { 
-    if (!this.state.connected){
-      this.setState({ loading: true })
-      this.manager
-        .startDeviceScan(null, null, (error, device) => {
-          if (error) {
-              this.setState({ 
-                loading: false,
-                error: `connection error: ${JSON.stringify(error, null, 2)}`
-              })
-              return
-          }
-          // Check if it is a device you are looking for has unique id
-          if (device.id === LEDBULUBUUID) {
-            this.manager.stopDeviceScan();
-            this.connectLed(device);
-          }
-      });
-    }
-  }
-
-  async connectLed(device){
-    this.device = await device.connect();
-    this.logServicesAndCharacteristics()
-    this.setColor('ffff00');
-    this.setState({ 
-      loading: false,
-      error: false,
-      connected: true 
-    })
-  }
-
-  async logServicesAndCharacteristics(){
-    const ledServices = await this.device
-      .discoverAllServicesAndCharacteristics();
-    const serviceArray = await ledServices.services();
-    const characteristicsArray = await Promise.all(
-      serviceArray
-        .map(async service => await service.characteristics())
-    );
-    console.log(serviceArray, characteristicsArray)
   }
   
+  renderContent = () => (
+    <ImageBackground source={require('../../../assets/images/background.jpeg')} style={styles.container}>
+      <View>
+        <TouchableOpacity style={{height: 200 }} onPress={() => this.toggleLightBulb(this.state.color)}>
+          <Icon name="lightbulb-o" size={200} 
+            color={this.state.on ? `#${this.state.color}` : 'rgba(255,255,255,.8)' } 
+            style={{ backgroundColor: 'transparent' }} />
+        </TouchableOpacity>       
+      </View>
+      <ColorPicker
+        defaultColor={"ffff00"}
+        onColorSelected={(color) => {
+          const lightBulbColor = color.substring(1)
+          if (this.state.on) {
+            this.setLightBulbColor(lightBulbColor)
+          }
+          this.setState({
+            color: lightBulbColor
+          })
+        }}
+        style={styles.linearGradient}
+      />
+    </ImageBackground>
+  )
 
-
-  async setColor(color, noUpdate){
-    try {
-      const ledServices = await this.device
-        .discoverAllServicesAndCharacteristics();
-
-      const value = 
-        new Buffer(`56${color}00f0aa`, 'hex')
-          .toString('base64');
-
-      const response = await this.device
-        .writeCharacteristicWithResponseForService(
-          "0000ffe5-0000-1000-8000-00805f9b34fb",
-          "0000ffe9-0000-1000-8000-00805f9b34fb",
-          value
-      );
-      
-      if (!noUpdate){
-        this.setState({ 
-          color,
-          on: true
-        })
-      }
-    } catch(error) {
-      this.setState({
-        error: `Exception: ${JSON.stringify(error, null, 2)}`
-      })
-    }
-  }
-
+  renderStatusView = () => (
+    <View source={require('../../../assets/images/background.jpeg')} style={styles.container}>
+      <Card title={this.state.error}>
+        <Text>{this.props.bluetoothStore.deviceStatus}</Text>
+        <Button title='Connect to LightBulb' onPress={() => this.connectToLightBulb()}/>
+      </Card>
+    </View>
+  )
 
   render() {
-    const { loading, error, connected, color } = this.state; 
-    return (
-      <ImageBackground source={require('./src/imgs/wroclaw.jpg')} style={styles.container}>
-        <Bulb { ...this.state } onPress={this.bulbPress}/>
-        <LightBulbColorPicker shouldShow={connected} defaultColor="yellow" onColorSelected={color => this.setColor(color.substring(1))} />
-        <ErrorPanel error={error} />
-      </ImageBackground>
-    );
+    return this.props.bluetoothStore.deviceReady 
+      ? this.renderContent() 
+      : this.renderStatusView()
   }
 }
 
-const ErrorPanel = ({ error }) => (error && <Text style={styles.error}>{error}</Text>)
-
-const Bulb = ({ connected, error, loading, color, on, onPress }) => loading ? 
-  <Icon name="bullseye" size={100} color="white" style={styles.icon} /> :
-  <TouchableOpacity onPress={onPress}>
-    <Icon name="lightbulb-o" size={200} 
-            color={connected ? on ? `#${color}` : `#000000` : error ? 'red': 'white'} 
-            style={styles.icon} />
-  </TouchableOpacity>          
-
-const LightBulbColorPicker = ({ defaultColor, onColorSelected, shouldShow}) => (
-  shouldShow && 
-  <ColorPicker
-    defaultColor={defaultColor}
-    onColorSelected={onColorSelected}
-    style={styles.linearGradient}
-  />
-)
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
+    paddingVertical: 40,
     alignItems: 'center'
   },
   error: {
@@ -182,11 +130,6 @@ const styles = StyleSheet.create({
   },
   icon: {
     backgroundColor: 'transparent'
-  },
-  instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
   },
   linearGradient: {
     flex: 1,
@@ -204,5 +147,3 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
 });
-
-AppRegistry.registerComponent('RNLedbulb', () => RNLedbulb);

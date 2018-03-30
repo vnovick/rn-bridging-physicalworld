@@ -1,0 +1,442 @@
+import React from 'react'
+import { AppRegistry } from 'react-native';
+import { RootComponent } from './root-component'
+import { Provider } from 'mobx-react'
+import { BluetoothStore } from '../stores/bluetoothStore'
+
+
+AppRegistry.registerComponent('physicalWorld', () => () => (
+  <Provider bluetoothStore={new BluetoothStore()}>
+    <RootComponent />
+  </Provider>
+));
+
+
+// root-component.js
+
+import React from 'react'
+import { View } from 'react-native'
+import { StatefulNavigator } from '../navigation'
+import { inject, observer, Provider } from 'mobx-react'
+import PropTypes from 'prop-types'
+
+@inject('bluetoothStore')
+@observer
+export class RootComponent extends React.Component {
+
+  constructor(props) {
+    super(props);
+    props.bluetoothStore.setupBleManager()
+  }
+
+  componentDidMount(){
+    this.props.bluetoothStore.subscribeToStateChange()
+  }
+
+  componentWillUnMount(){
+    this.props.bluetoothStore.removeSubscription()
+    this.props.bluetoothStore.destroyBleManager()
+  }
+ 
+  render() {
+    return (
+      <View style={{flex: 1}}>
+        <StatefulNavigator />
+      </View>
+    )
+  }
+}
+
+
+//scanner.js
+
+import React from 'react'
+import { Platform, View, Text, ScrollView, Button, TouchableOpacity} from 'react-native'
+import Accordion from 'react-native-collapsible/Accordion'
+import LottieView from 'lottie-react-native'
+import { inject, observer } from 'mobx-react'
+import { Card, List, ListItem, Avatar } from 'react-native-elements'
+
+
+@inject('bluetoothStore')
+@observer
+export class Scanner extends React.Component {
+
+  
+  state = {
+    bluetoothState: '',
+    dataset: [],
+    bluetoothPoweredOn: false,
+    on: true,
+    connected: false,
+    color: 'ffff00',
+    loading: false,
+    error: false
+  }
+
+
+  scan() {
+    this.animation.play()
+    this.props.bluetoothStore.scanDevices()
+  }
+
+  renderHeader(device) {
+    return (
+      <ListItem title={device.name} subtitle={device.id} containerStyle={{ marginHorizontal: 16 }}/>
+    )
+  }
+
+
+  connectAndNavigate(device) {
+    this.props.bluetoothStore.connectDevice(device)
+    this.props.navigation.navigate('services')
+  }
+
+
+  renderContent(device) {
+    return (
+      <Card>
+        <Text>id: {device.id}</Text>
+        <Text>isConnectable: {device.isConnectable}</Text>
+        <Text>localName: {device.localName}</Text>
+        <Text>manufacturerData: {device.manufacturerData}</Text>
+        <Text>mtu: {device.mtu}</Text>
+        <Text>name: {device.name}</Text>
+        <Text>overflowServiceUUIDs: {device.overflowServiceUUIDs}</Text>
+        <Text>rssi: {device.rssi}</Text>
+        <Text>serviceData: {device.serviceData}</Text>
+        <Text>serviceUUIDs: {device.serviceUUIDs}</Text>
+        <Text>solicitedServiceUUIDs: {device.solicitedServiceUUIDs}</Text>
+        <Text>txPowerLevel: {device.txPowerLevel}</Text>
+        <Button title="Connect" onPress={
+          () => this.connectAndNavigate(device)
+        } />
+      </Card>
+    )
+  }
+
+
+  render() {
+    return (
+      <ScrollView style={{paddingBottom: 100 }} 
+        contentContainerStyle={{justifyContent: 'flex-start', paddingHorizontal: 16  }}>
+        <TouchableOpacity style={styles.buttonStyle} 
+          onPress={() => this.scan()}>
+          <LottieView
+            ref={animation => (this.animation = animation)}
+            imageAssetsFolder="images"
+            // resizeMode="cover"
+            source={Platform.OS === 'ios' ? require('./scanner-data.json') : 'scanner-data.json'}
+          />
+        </TouchableOpacity>
+        <Card title="Bluetooth State">
+          <Text>{`Bluetooth State: ${this.props.bluetoothStore.bleState}`}</Text>
+          <Text>{`Error State: ${this.props.bluetoothStore.deviceScanError}`}</Text>
+        </Card>
+        <Accordion 
+          underlayColor="rgba(255,255,255,.5)"
+          sections={
+            this.props.bluetoothStore.deviceList.toJS()
+          }
+          renderHeader={this.renderHeader}
+          renderContent={
+            (content) => 
+              this.renderContent(content)
+          }
+        />
+      </ScrollView>
+    )
+  }
+}
+
+// services
+
+import React from 'react'
+import { Platform, View, Text, Button, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native'
+import Accordion from 'react-native-collapsible/Accordion'
+import LottieView from 'lottie-react-native'
+import { inject, observer } from 'mobx-react'
+import { Card, List, ListItem, Avatar } from 'react-native-elements'
+
+
+@inject('bluetoothStore')
+@observer
+export class Services extends React.Component {
+
+  static navigationOptions = {
+    title: 'Services',
+  }
+
+  getServicesList() {
+    return (
+        <List>
+          { this.props.bluetoothStore.services.map((service, index) => (
+            <TouchableOpacity key={`${service.uuid}-${index}`} onPress={() => {this.props.navigation.navigate('characteristics', { service })}}>
+              <Card>
+                { 
+                  Object.keys(service).map((key, index) => {
+                    const value = service[key]
+                    if (typeof value !== "object") {
+                      return <Text key={`${service.uuid}-${index}-${key}`}>{`${key}: ${value || 'null'}`}</Text>
+                    }
+                  })
+                }
+              </Card>
+            </TouchableOpacity>
+          ))}
+        </List>
+    )
+  }
+
+  renderContent(device) {
+    return (
+      <View>  
+        <Card>
+          <Text>id: {device.id}</Text>
+          <Text>name: {device.name}</Text>
+          <Text>Status: {this.props.bluetoothStore.status}</Text>
+          <Button title="Discover Services" onPress={() => this.props.bluetoothStore.discoverServices() }/>
+        </Card>
+        { this.props.bluetoothStore.services ? 
+          this.getServicesList() :
+          <ActivityIndicator />
+        }
+      </View>
+    )
+  }
+
+
+  render() {
+    const { connectedDevice } = this.props.bluetoothStore
+    return (
+      <ScrollView style={{paddingBottom: 100 }} contentContainerStyle={{justifyContent: 'flex-start', paddingHorizontal: 16  }}>
+        { connectedDevice ? this.renderContent(connectedDevice) : <ActivityIndicator />}
+      </ScrollView>
+    )
+  }
+}
+
+//characteristics.js
+
+import React from 'react'
+import { Platform, View, Text, Button, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native'
+import Accordion from 'react-native-collapsible/Accordion'
+import LottieView from 'lottie-react-native'
+import { inject, observer } from 'mobx-react'
+import { Card, List, ListItem, Avatar } from 'react-native-elements'
+
+
+@inject('bluetoothStore')
+@observer
+export class Characteristics extends React.Component {
+
+  static navigationOptions = {
+    title: 'Characteristics',
+  }
+
+
+  getServicesList() {
+    console.log(this.props.bluetoothStore.services)
+    return (
+        <List>
+          { this.props.bluetoothStore.services.map(service => (
+            <TouchableOpacity onPress={() => {this.props.navigation.navigate('characteristics', { service })}}>
+              <ListItem title={service.uuid} />
+            </TouchableOpacity>
+          ))}
+        </List>
+    )
+  }
+
+  renderContent(device) {
+    return (
+      <View>  
+        <Card>
+          <Text>id: {device.id}</Text>
+          <Text>name: {device.name}</Text>
+          <Text>Status: {this.props.bluetoothStore.status}</Text>
+          <Button title="Discover Services" onPress={() => this.props.bluetoothStore.discoverServices() }/>
+        </Card>
+        { this.props.bluetoothStore.services ? 
+          this.getServicesList() :
+          <ActivityIndicator />
+        }
+      </View>
+    )
+  }
+
+
+  render() {
+    const { service } = this.props.navigation.state.params
+    return (
+      <ScrollView style={{paddingBottom: 100 }} contentContainerStyle={{justifyContent: 'flex-start', paddingHorizontal: 16  }}>
+        <View>  
+        <Card>
+          <Text>uuid: {service.uuid}</Text>
+          <Text>id: {service.id}</Text>
+          <Text>Status: {this.props.bluetoothStore.status}</Text>
+          <Button title="Discover Characteristics" onPress={() => this.props.bluetoothStore.discoverCharacteristics(service) }/>
+        </Card>
+        <Card>
+          { this.props.bluetoothStore.characteristics.map((characteristic, index) => (
+            Object.keys(characteristic).map(key => {
+              const value = characteristic[key]
+              if (typeof value !== "object") {
+                return <Text key={`${characteristic.uuid}-${index}-${key}`}>{`${key}: ${value || null}`}</Text>
+              }
+            })
+          ))}
+        </Card>
+        </View>
+      </ScrollView>
+    )
+  }
+}
+
+// bluetoothStore
+
+import { observable, action, computed } from "mobx"
+import { BleManager } from 'react-native-ble-plx'
+
+const DEVICES_TO_FILTER=['Vladimir’s MacBook Pro']
+
+export class BluetoothStore {
+  @observable manager = {}
+  @observable bleState = 'Undefined'
+  @observable stateChangeSub = null
+  @observable deviceScanError = null
+  @observable deviceConnectError = null
+  @observable deviceList = []
+  @observable connectedDevice = null
+  @observable serviceDiscovery = null
+  @observable services = []
+  @observable characteristics = []
+  @observable status = ''
+
+
+
+  @computed 
+  get deviceStatus() {
+    if (this.bleState !== 'PoweredOn') {
+      return 'Bluetooth unavailable'
+    }
+    return this.status
+  }
+
+  @computed 
+  get deviceReady(){
+    return !!this.serviceDiscovery
+  }
+
+  @action setupBleManager = async () => {
+    this.manager = new BleManager()
+    const bleState = await this.manager.state()
+    this.bleState = bleState
+  }
+
+  @action destroyBleManager = async () => {
+    this.manager.destroy()
+  }
+
+  @action subscribeToStateChange = () => {
+    this.stateChangeSub = this.manager.onStateChange(
+      state => {
+        this.updateBleState(state)
+      })
+  }
+
+  @action removeSubscription = () => {
+    this.stateChangeSub.remove()
+  }
+
+  @action updateBleState(bleState) {
+    this.bleState = bleState
+  }
+
+  @action setDeviceScanError(error) {
+    this.deviceScanError = `scanning error: ${JSON.stringify(error, null, 2)}`
+  }
+
+  @action setDeviceConnectError(error) {
+    this.deviceConnectError = `connection error: ${JSON.stringify(error, null, 2)}`
+  }
+
+  @action scanDevices(callback) {
+    if (this.bleState === 'PoweredOn') {
+      this.manager.startDeviceScan(
+        null, null, (error, device) => {
+        if (error) {
+          this.setDeviceScanError(error)
+          return
+        }
+        if (!DEVICES_TO_FILTER.includes(device.name)){
+          this.updateDeviceList(device)
+        }
+      })
+    } else {
+      this.setDeviceScanError(`Could not scan - check your Bluetooth state`)
+    }
+  }
+
+  @action updateDeviceList(device) {
+    this.deviceList = [
+      ...this.deviceList.map(
+        existingDevice => device.id === existingDevice.id 
+          ? device 
+          : existingDevice
+        ),
+      device 
+    ].filter((value, index, self) => self.indexOf(value) === index)
+  }
+
+  @action setServices(services) {
+    this.status = 'Services discovered'
+    this.services = services
+  }
+
+  @action setCharacteristics(characteristics) {
+    this.status = 'Characteristics discovered'
+    this.characteristics = characteristics
+  }
+
+  @action async connectDevice(device) {
+    try {
+      this.status = `Connecting ${device.name}`
+      const connectedDevice = await device.connect()
+      this.connectedDevice = connectedDevice
+      this.status = `${device.name} connected`
+      this.discovery = await 
+        this.startServiceDiscovery(connectedDevice)
+    } catch (e) {
+      this.setDeviceConnectError(e.message)
+    }
+  }
+
+// Async actions 
+
+  @action async discoverServices(){
+    const serviceArray = await 
+      this.serviceDiscovery.services()
+    this.setServices(serviceArray)
+  }
+
+  @action async discoverCharacteristics(service){
+    const characteristics = await 
+      service.characteristics()
+    this.setCharacteristics(characteristics)
+  }
+
+  @action async startServiceDiscovery(device){
+    try {
+      const serviceDiscovery = await 
+        device.discoverAllServicesAndCharacteristics()
+      this.serviceDiscovery = serviceDiscovery
+      this.status = 'Discovery enabled'
+    } catch (e) {
+      console.log(e)
+      this.setDeviceScanError(e.message)
+    }
+  }
+}
+
+
