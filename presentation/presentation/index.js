@@ -263,7 +263,7 @@ export default class Presentation extends React.Component {
           </List>
         </Slide>
         <Slide bgImage={images.network} bgDarken={.5}>
-          <Heading size={1} lineHeight={2} textColor="quartenary">It"s Demo time!</Heading>
+          <Heading size={1} lineHeight={2} textColor="quartenary">It's Demo time!</Heading>
         </Slide>
         <Slide bgImage={images.network} bgDarken={.5}>
           <iframe height="500px" width="100%" src="https://www.youtube.com/embed/y_6E1iCPXEM?rel=0&controls=0&showinfo=0" frameBorder="0" allowFullscreen />
@@ -316,7 +316,7 @@ export default class Presentation extends React.Component {
           <Image src={require("../assets/ble_hierarchy.jpg")} />
         </Slide>
         <Slide bgImage={images.network} bgDarken={.5}>
-          <Heading size={1} lineHeight={2} textColor="quartenary">It"s Demo time!</Heading>
+          <Heading size={1} lineHeight={2} textColor="quartenary">It's Demo time!</Heading>
         </Slide>
         <Slide bgImage={images.network} bgDarken={.5}>
           <iframe height="500px" width="100%" src="https://www.youtube.com/embed/LRLzADDN_y4?rel=0&controls=0&showinfo=0" frameBorder="0" allowFullscreen />
